@@ -774,12 +774,16 @@ EVPnew(PyObject *module, const EVP_MD *digest,
 #ifdef EVP_MD_CTX_FLAG_NON_FIPS_ALLOW
         EVP_MD_CTX_set_flags(self->ctx, EVP_MD_CTX_FLAG_NON_FIPS_ALLOW);
 #endif
+        digest = EVP_MD_fetch(NULL, EVP_MD_get0_name(digest), "-fips");
     }
 
 
     if (!EVP_DigestInit_ex(self->ctx, digest, NULL)) {
         _setException(PyExc_ValueError);
         Py_DECREF(self);
+        if (!usedforsecurity) {
+            EVP_MD_free(digest);
+        }
         return NULL;
     }
 
@@ -793,10 +797,16 @@ EVPnew(PyObject *module, const EVP_MD *digest,
         }
         if (result == -1) {
             Py_DECREF(self);
+            if (!usedforsecurity) {
+                EVP_MD_free(digest);
+            }
             return NULL;
         }
     }
 
+    if (!usedforsecurity) {
+        EVP_MD_free(digest);
+    }
     return (PyObject *)self;
 }
 
